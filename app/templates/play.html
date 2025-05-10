@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Video Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: auto; background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; margin-bottom: 20px; }
+        .controls { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
+        .video-container { position: relative; margin-bottom: 20px; }
+        #videoPlayer { width: 100%; max-height: 600px; background-color: #000; }
+        .time-input { margin: 10px 0; }
+        input[type="number"] { width: 80px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #2196F3; color: white; border: none; padding: 8px 15px; margin: 5px; cursor: pointer; border-radius: 5px; }
+        button:hover { background-color: #0b7dda; }
+        button.primary { background-color: #4CAF50; }
+        button.primary:hover { background-color: #45a049; }
+        button.danger { background-color: #f44336; }
+        button.danger:hover { background-color: #d32f2f; }
+        .object-list { max-height: 200px; overflow-y: auto; background-color: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .object-item { padding: 5px 10px; margin: 5px 0; background-color: #e9e9e9; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; }
+        .object-item:hover { background-color: #d5d5d5; }
+        .selected { background-color: #bbdefb; }
+        .detection-info { margin-top: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px; }
+        .loading { text-align: center; padding: 20px; }
+        .loading img { width: 50px; }
+        #annotatedImage { max-width: 100%; display: block; margin: 0 auto; }
+        .info-panel { margin-top: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 5px; }
+        .description-box { margin-top: 15px; padding: 10px; background-color: #e8f5e9; border-radius: 5px; max-height: 200px; overflow-y: auto; }
+        .description-item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #ddd; }
+        .time-display { font-weight: bold; margin-right: 10px; }
+        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; border-radius: 5px; }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover { color: black; }
+        .summary-box { padding: 15px; background-color: #f1f8e9; border-radius: 5px; margin-top: 15px; white-space: pre-line; }
+        .btn-group { display: flex; gap: 10px; margin: 10px 0; }
+        .status-message { padding: 10px; background-color: #e3f2fd; border-radius: 5px; margin: 10px 0; }
+        .progress-bar-container { width: 100%; background-color: #e0e0e0; border-radius: 5px; margin: 10px 0; }
+        .progress-bar { height: 20px; background-color: #4CAF50; border-radius: 5px; text-align: center; line-height: 20px; color: white; }
+        @media (max-width: 768px) {
+            .controls { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Video Tracker</h1>
+        <div class="video-container">
+            <video id="videoPlayer" controls>
+                <source src="{{ url_for('uploaded_file', filename=video_info.filename) }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <div class="controls">
+            <div class="time-controls">
+                <div class="time-input">
+                    <label for="timeInput">Jump to time (seconds):</label>
+                    <input type="number" id="timeInput" min="0" step="0.1" value="0">
+                    <button onclick="jumpToTime()">Go</button>
+                </div>
+                <button onclick="captureFrame()" class="primary">Analyze Current Frame</button>
+            </div>
+            <div class="tracking-controls">
+                <button id="trackBtn" onclick="startTracking()" disabled class="primary">Track Selected Object</button>
+                <button id="stopTrackBtn" onclick="stopTracking()" disabled class="danger">Stop Tracking</button>
+            </div>
+        </div>
+        <div id="loadingMessage" class="loading" style="display: none;">
+            <p>Loading models and analyzing frame... This might take a moment.</p>
+            <img src="https://i.gifer.com/origin/b4/b4d657e7ef262b88eb5f7ac021edda87.gif" alt="Loading">
+        </div>
+        <div id="results" style="display: none;">
+            <h2>Detection Results</h2>
+            <div class="object-list" id="objectList">
+                <p>No objects detected. Try analyzing a frame first.</p>
+            </div>
+            <div class="detection-info">
+                <img id="annotatedImage" src="" alt="Annotated Frame">
+            </div>
+            <div class="info-panel" id="trackingInfo" style="display: none;">
+                <h3>Tracking Information</h3>
+                <div id="trackingStatus" class="status-message"></div>
+                <div id="progressContainer" class="progress-bar-container" style="display: none;">
+                    <div id="progressBar" class="progress-bar" style="width: 0%">0%</div>
+                </div>
+                <div class="btn-group">
+                    <button onclick="showSummary()" class="primary">View Summary</button>
+                </div>
+                <h3>Object Descriptions</h3>
+                <div id="descriptionBox" class="description-box">
+                    <p>No descriptions available yet.</p>
+                </div>
+            </div>
+        </div>
+        <div id="summaryModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeSummary()">×</span>
+                <h2>Tracking Summary</h2>
+                <div id="summaryContent" class="summary-box"></div>
+                <button onclick="closeSummary()" style="margin-top: 15px;">Close</button>
+            </div>
+        </div>
+        <div style="margin-top: 20px;">
+            <a href="{{ url_for('upload_page') }}" style="text-decoration: none;">
+                <button>Upload Another Video</button>
+            </a>
+        </div>
+    </div>
+    <script>
+        const video = document.getElementById('videoPlayer');
+        const timeInput = document.getElementById('timeInput');
+        let selectedId = null;
+        let isTracking = false;
+        window.onload = function() {
+            timeInput.value = 0;
+            if (video.querySelector('source').src) {
+                video.addEventListener('loadedmetadata', function() {
+                    console.log("Video duration: " + video.duration);
+                });
+            } else {
+                document.getElementById('results').style.display = 'block';
+                document.getElementById('results').innerHTML = '<div class="info-panel">No video uploaded. Please <a href="{{ url_for("upload_page") }}">upload a video</a> first.</div>';
+            }
+        };
+        function jumpToTime() {
+            const time = parseFloat(timeInput.value);
+            if (!isNaN(time) && time >= 0) {
+                video.currentTime = time;
+            }
+        }
+        function captureFrame() {
+            const currentTime = video.currentTime;
+            timeInput.value = currentTime.toFixed(2);
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            fetch('/process_frame', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ time: currentTime })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('results').style.display = 'block';
+                if (data.models_ready === false) {
+                    document.getElementById('results').innerHTML = '<div class="info-panel">Models are still loading. Please wait a moment and try again.</div>';
+                    setTimeout(captureFrame, 3000);
+                    return;
+                }
+                if (data.error) {
+                    document.getElementById('results').innerHTML = `<div class="info-panel">Error: ${data.error}</div>`;
+                    return;
+                }
+                updateObjectList(data.detections);
+                updateAnnotatedImage(data.annotated_image);
+                document.getElementById('trackingInfo').style.display = 'none';
+                document.getElementById('trackBtn').disabled = selectedId === null;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('results').innerHTML = `<div class="info-panel">Error: ${error.message}</div>`;
+            });
+        }
+        function updateObjectList(detections) {
+            const objectList = document.getElementById('objectList');
+            if (!detections || detections.length === 0) {
+                objectList.innerHTML = '<p>No objects detected in this frame.</p>';
+                return;
+            }
+            let html = '';
+            detections.forEach(det => {
+                const isSelected = det.id === selectedId;
+                html += `
+                    <div class="object-item ${isSelected ? 'selected' : ''}" onclick="selectObject(${det.id})">
+                        <span>${det.class} (ID: ${det.id})</span>
+                        <span>Confidence: ${det.conf ? det.conf.toFixed(2) : 'N/A'}</span>
+                    </div>
+                `;
+            });
+            objectList.innerHTML = html;
+        }
+        function updateAnnotatedImage(imageName) {
+            if (imageName) {
+                const timestamp = new Date().getTime();
+                document.getElementById('annotatedImage').src = `/annotated/${imageName}?t=${timestamp}`;
+            }
+        }
+        function selectObject(id) {
+            selectedId = id;
+            const items = document.querySelectorAll('.object-item');
+            items.forEach(item => {
+                item.classList.remove('selected');
+                if (item.textContent.includes(`ID: ${id}`)) {
+                    item.classList.add('selected');
+                }
+            });
+            document.getElementById('trackBtn').disabled = false;
+        }
+        function startTracking() {
+            if (!selectedId) {
+                alert('Please select an object to track first.');
+                return;
+            }
+            const currentTime = video.currentTime;
+            isTracking = true;
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('trackBtn').disabled = true;
+            document.getElementById('stopTrackBtn').disabled = false;
+            fetch('/start_tracking', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ time: currentTime, track_id: selectedId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('trackingInfo').style.display = 'block';
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                updateTrackingUI(data);
+                if (data.tracking_active) {
+                    pollTrackingStatus();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loadingMessage').style.display = 'none';
+                alert('Error: ' + error.message);
+            });
+        }
+        function stopTracking() {
+            fetch('/stop_tracking', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                isTracking = false;
+                document.getElementById('stopTrackBtn').disabled = true;
+                document.getElementById('trackBtn').disabled = false;
+                document.getElementById('progressContainer').style.display = 'none';
+                document.getElementById('trackingStatus').textContent = 'Tracking stopped.';
+                if (data.summary && data.summary.length > 0) {
+                    document.getElementById('summaryContent').textContent = data.summary[0].text;
+                    showSummary();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        function pollTrackingStatus() {
+            if (!isTracking) return;
+            fetch('/tracking_status')
+            .then(response => response.json())
+            .then(data => {
+                updateTrackingUI(data);
+                if (data.tracking_active) {
+                    setTimeout(pollTrackingStatus, 2000);
+                } else {
+                    document.getElementById('stopTrackBtn').disabled = true;
+                    document.getElementById('trackBtn').disabled = false;
+                    document.getElementById('trackingStatus').textContent = 'Tracking completed!';
+                    if (data.tracking_summary && data.tracking_summary.length > 0) {
+                        document.getElementById('summaryContent').textContent = data.tracking_summary[0].text;
+                        showSummary();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error polling tracking status:', error);
+                setTimeout(pollTrackingStatus, 5000);
+            });
+        }
+        function updateTrackingUI(data) {
+            if (data.annotated_image) {
+                updateAnnotatedImage(data.annotated_image);
+            }
+            const trackingStatus = document.getElementById('trackingStatus');
+            if (data.tracking_active) {
+                trackingStatus.textContent = `Actively tracking object ID ${selectedId}...`;
+                document.getElementById('progressContainer').style.display = 'block';
+                const progressBar = document.getElementById('progressBar');
+                progressBar.style.width = `${data.progress}%`;
+                progressBar.textContent = `${Math.round(data.progress)}%`;
+            } else {
+                trackingStatus.textContent = 'Tracking is paused. Click "Track Selected Object" to resume.';
+            }
+            updateDescriptions(data.descriptions);
+        }
+        function updateDescriptions(descriptions) {
+            const descBox = document.getElementById('descriptionBox');
+            if (!descriptions || descriptions.length === 0) {
+                descBox.innerHTML = '<p>No descriptions available yet.</p>';
+                return;
+            }
+            let html = '';
+            const recentDescriptions = descriptions.slice(-5);
+            recentDescriptions.forEach(desc => {
+                const time = desc.frame_time ? desc.frame_time.toFixed(2) : '?';
+                html += `
+                    <div class="description-item">
+                        <span class="time-display">${time}s:</span>
+                        <span>${desc.english}</span>
+                    </div>
+                `;
+            });
+            descBox.innerHTML = html;
+            descBox.scrollTop = descBox.scrollHeight;
+        }
+        function showSummary() {
+            document.getElementById('summaryModal').style.display = 'block';
+        }
+        function closeSummary() {
+            document.getElementById('summaryModal').style.display = 'none';
+        }
+        window.onclick = function(event) {
+            const modal = document.getElementById('summaryModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

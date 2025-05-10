@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Video</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        .video-info { background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        input[type="file"] { display: none; }
+        .file-upload { display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; cursor: pointer; border-radius: 5px; margin-bottom: 10px; }
+        .file-upload:hover { background-color: #45a049; }
+        #fileName { margin: 10px 0; color: #666; }
+        button { background-color: #2196F3; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; }
+        button:hover { background-color: #0b7dda; }
+        a { display: inline-block; margin-top: 20px; color: #2196F3; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload a Video</h1>
+        <div class="video-info">
+            <p><strong>Current video:</strong> {{ video_info.filename }}</p>
+            <p><strong>FPS:</strong> {{ video_info.fps }}, <strong>Frames:</strong> {{ video_info.frame_count }}, <strong>Duration:</strong> {{ "%.2f"|format(video_info.duration) }}s</p>
+        </div>
+        <form id="uploadForm" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+            <label for="fileInput" class="file-upload">Choose Video File</label>
+            <input type="file" name="file" id="fileInput" accept="video/*" required>
+            <p id="fileName">No file selected</p>
+            <button type="submit" id="uploadBtn">Upload Video</button>
+        </form>
+        <a href="{{ url_for('play') }}">Go to Video Player</a>
+    </div>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                fileName.textContent = this.files[0].name;
+                uploadBtn.disabled = false;
+            } else {
+                fileName.textContent = 'No file selected';
+                uploadBtn.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>
