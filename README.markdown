@@ -82,6 +82,7 @@ The project integrates computer vision libraries (e.g., OpenCV), NLP models (e.g
    - Upload a video, track objects, and generate threat analysis reports.
 
 ### Running in a Jupyter Notebook (e.g., Google Colab)
+- **You can directly use the "FinalNotebookNLP" in the project folder, Or:**.
 
 1. **Clone the Repository**:
 
