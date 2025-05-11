@@ -2,11 +2,10 @@ import os
 from pyngrok import ngrok, conf
 from app import create_app
 
-# Replace with your valid ngrok auth token
 NGROK_AUTH_TOKEN = '2vmgsDLjGCur8P5JF1LXquHmNL9_x31q3baL72mbp2ATw3Zg'
 
 def start_ngrok():
-    """Start ngrok for Colab."""
+
     try:
         conf.get_default().auth_token = NGROK_AUTH_TOKEN
         public_url = ngrok.connect(5000).public_url
