@@ -110,41 +110,22 @@ The project integrates computer vision libraries (e.g., OpenCV), NLP models (e.g
 
 4. **Run the Flask Application**:
 
-   - Flask cannot directly run in a Jupyter Notebook environment like Colab due to its server nature. However, you can use `ngrok` to expose the Flask app or run it in a separate terminal.
-   - Alternatively, test the core functionality (e.g., video processing, tracking, and analysis) by calling functions directly from `video_processing.py`, `gemini_processing.py`, etc., in the notebook.
-
-   Example (for testing core functionality in a notebook):
-
    ```python
-   from app.video_processing import process_frame
-   from app.gemini_processing import violence_report_generator
-   from app.routes import refine_with_llm
-   
-   # Simulate processing a video frame
-   video_path = "path/to/your/video.mp4"
-   frame_time = 0
-   result = process_frame(video_path, frame_time, app_config={'ANNOTATED_FOLDER': 'annotated'})
-   print("Frame Processing Result:", result)
-   
-   # Simulate refining a summary and generating a report
-   summary = "Person with ID 1 was moving quickly in a garage."
-   refined_summary = refine_with_llm(summary)
-   report = violence_report_generator(refined_summary)
-   print("Refined Summary:", refined_summary)
-   print("Threat Analysis Report:", report)
+   import gdown
+   file_id = '17fKW27lHLiPJK9KT7mN9PUQQIpUD93LN'
+   url = f'https://drive.google.com/uc?export=download&id={file_id}'
+   output_path = 'fine_tuned_bert_multilabel.pt'
+   gdown.download(url, output_path, quiet=False)
    ```
+   
+ 
 
 5. **Running Flask in Colab (Optional)**:
 
    - Use `ngrok` to expose the Flask app:
 
      ```python
-     !pip install flask-ngrok
-     from flask_ngrok import run_with_ngrok
-     from app import app
-     
-     run_with_ngrok(app)
-     app.run()
+      !python /content/NLP_FINAL_PR/main.py
      ```
 
    - Follow the ngrok URL provided in the output to access the app.
@@ -166,29 +147,6 @@ The project integrates computer vision libraries (e.g., OpenCV), NLP models (e.g
    - Click "See Report Analysis" to refine the summary using an LLM and generate a threat analysis report.
    - The report will include the original summary, refined summary, and threat analysis details (e.g., risk levels).
 
-## LLM Integration
-
-The project uses an LLM to refine tracking summaries before threat analysis. The `refine_with_llm` function in `routes.py` is a placeholder. To use a real LLM:
-
-1. Replace `refine_with_llm` with an API call to your preferred LLM (e.g., xAI's Grok, OpenAI's GPT).
-
-   - Example for OpenAI:
-
-     ```python
-     from openai import OpenAI
-     def refine_with_llm(text):
-         client = OpenAI(api_key="your-openai-api-key")
-         response = client.chat.completions.create(
-             model="gpt-3.5-turbo",
-             messages=[
-                 {"role": "system", "content": "Refine text for clarity and coherence."},
-                 {"role": "user", "content": f"Refine this summary: {text}"}
-             ]
-         )
-         return response.choices[0].message.content.strip()
-     ```
-
-2. Update the API key and endpoint as needed.
 
 ## Troubleshooting
 
@@ -204,8 +162,3 @@ The project uses an LLM to refine tracking summaries before threat analysis. The
 - Enhance threat analysis with more advanced NLP models.
 - Deploy the application on a cloud platform (e.g., Heroku, AWS).
 
-## Contributors
-
-- 7ossam-amir (GitHub: 7ossam-amir)
-
-For issues or contributions, please open a pull request or issue on the GitHub repository.
