@@ -2,6 +2,9 @@ from flask import render_template, request, redirect, url_for, send_from_directo
 from werkzeug.utils import secure_filename
 from .video_processing import get_video_data, get_video_info, process_frame, allowed_file, cleanup_annotated_folder, generate_tracking_summary
 import os
+import glob
+import time  # Added missing import
+import app.gemini_processing as gp
 
 def init_routes(app):
     video_data = get_video_data()
@@ -94,11 +97,27 @@ def init_routes(app):
     def stop_tracking():
         video_data['continuous_tracking'] = False
         video_data['tracking_active'] = False
+        violence_report = None
+
         if video_data['selected_id'] is not None:
-            generate_tracking_summary(video_data['selected_id'])
+            # Generate tracking summary
+            video_data['tracking_summary'] = generate_tracking_summary(video_data['selected_id'])
+
+            # Debug: Print tracking summary
+            print("Tracking summary for ID", video_data['selected_id'], ":", video_data['tracking_summary'])
+
+            # Generate violence report using the tracking summary
+            if video_data['tracking_summary']:
+                violence_report = gp.violence_report_generator(video_data['tracking_summary'][0]['text'] if video_data['tracking_summary'] else '')
+                violence_report_filename = f"violence_report_{video_data['filename']}_{video_data['selected_id']}.txt"
+                violence_report_filepath = os.path.join(app.config['UPLOAD_FOLDER'], violence_report_filename)
+                with open(violence_report_filepath, 'w') as f:
+                    f.write(violence_report)
+
         return jsonify({
             'success': True,
-            'summary': video_data['tracking_summary']
+            'summary': video_data['tracking_summary'],
+            'violence_report': violence_report  # Return the report content
         })
 
     @app.route('/tracking_status', methods=['GET'])
@@ -124,3 +143,29 @@ def init_routes(app):
         if annotated_files:
             result['annotated_image'] = os.path.basename(annotated_files[0])
         return jsonify(result)
+
+    @app.route('/generate_analysis', methods=['POST'])
+    def generate_analysis():
+        data = request.get_json()
+        summary = data.get('summary', '')
+        
+        if not summary:
+            return jsonify({'error': 'No summary provided'}), 400
+        
+        try:
+            # Use the threat analyzer to generate a report
+            report = gp.violence_report_generator(summary)
+            
+            # Save the report to a file for reference
+            analysis_filename = f"analysis_report_{time.time()}.txt"
+            analysis_filepath = os.path.join(app.config['UPLOAD_FOLDER'], analysis_filename)
+            with open(analysis_filepath, 'w') as f:
+                f.write(report)
+            
+            return jsonify({
+                'success': True,
+                'report': report
+            }), 200
+        except Exception as e:
+            print(f"Error generating analysis: {str(e)}")
+            return jsonify({'error': f"Failed to generate analysis: {str(e)}"}), 500

@@ -1,0 +1,66 @@
+
+================================================================================
+THREAT ANALYSIS REPORT: 'Summary for Object ID 1 (person):
+
+Tracked from 0.00s to 6.68s (Duration: 6.68s)
+
+Activity Timeline:
+From 0.0s to 5.0s: there are two men standing next to each other looking at their cell phones
+From 5.0s to 10.0s: there is a man that is sitting on a toilet with a cell phone
+
+Comprehensive Summary:
+arafed man in a black sweater and jeans looking at a cell phone there are two men standing next to each other looking at their cell phones they are fighting in a garage with one another there is a man that is sitting on a toilet with a cell phone'
+
+OVERALL RISK: MINIMAL (Score: 0.20)
+
+DETAILED FINDINGS:
+
+--- VIOLENCE ---
+Classification: 5 - Critical violent threat
+Confidence: 1.00
+Probabilities:
+  0: 0.0638
+  1: 0.0372
+  2: 0.0135
+  3: 0.0016
+  4: 0.0003
+  5: 0.2097
+  6: 0.0592
+
+--- GENOCIDE ---
+Classification: 0 - No genocide rhetoric
+Confidence: 0.99
+Probabilities:
+  0: 0.0171
+  1: 0.0008
+  2: 0.0003
+  3: 0.0014
+  4: 0.0052
+
+--- HATESPEECH ---
+Classification: 0 - No hate speech
+Confidence: 0.98
+Probabilities:
+  0: 0.1385
+  1: 0.0206
+  2: 0.0013
+
+--- OTHER ---
+Classification: 0 - No other concern
+Confidence: 0.99
+Probabilities:
+  0: 0.4132
+  1: 0.0124
+  2: 0.0037
+  3: 0.0000
+  4: 0.0000
+
+ATTENTION ANALYSIS:
+Most Important Words (Simplified):
+  '[CLS]': 0.0000
+  'summary': 0.0000
+  'for': 0.0000
+  'object': 0.0000
+  'id': 0.0000
+
+================================================================================

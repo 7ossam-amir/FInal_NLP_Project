@@ -43,6 +43,31 @@
         @media (max-width: 768px) {
             .controls { flex-direction: column; }
         }
+        #analysisContent {
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            padding: 15px;
+            line-height: 1.5;
+        }
+        .threat-critical {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .threat-high {
+            color: #f57c00;
+            font-weight: bold;
+        }
+        .threat-moderate {
+            color: #fbc02d;
+            font-weight: bold;
+        }
+        .threat-low {
+            color: #7cb342;
+        }
+        .threat-minimal {
+            color: #388e3c;
+        }
     </style>
 </head>
 <body>
@@ -95,12 +120,26 @@
                 </div>
             </div>
         </div>
+        <!-- Modified HTML for the summary modal -->
         <div id="summaryModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeSummary()">×</span>
                 <h2>Tracking Summary</h2>
                 <div id="summaryContent" class="summary-box"></div>
-                <button onclick="closeSummary()" style="margin-top: 15px;">Close</button>
+                <div class="btn-group" style="margin-top: 15px;">
+                    <button onclick="generateAnalysisReport()" class="primary">See Report Analysis</button>
+                    <button onclick="closeSummary()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Analysis Report Modal -->
+        <div id="analysisModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeAnalysis()">×</span>
+                <h2>Threat Analysis Report</h2>
+                <div id="analysisContent" class="summary-box" style="white-space: pre-line; background-color: #fff3e0;"></div>
+                <button onclick="closeAnalysis()" style="margin-top: 15px;">Close</button>
             </div>
         </div>
         <div style="margin-top: 20px;">
@@ -246,13 +285,21 @@
                 document.getElementById('trackBtn').disabled = false;
                 document.getElementById('progressContainer').style.display = 'none';
                 document.getElementById('trackingStatus').textContent = 'Tracking stopped.';
-                if (data.summary && data.summary.length > 0) {
+
+                if (data.violence_report) {
+                    document.getElementById('summaryContent').textContent = data.violence_report;
+                    showSummary();
+                } else if (data.summary && data.summary.length > 0) {
                     document.getElementById('summaryContent').textContent = data.summary[0].text;
+                    showSummary();
+                } else {
+                    document.getElementById('summaryContent').textContent = 'No summary or report available.';
                     showSummary();
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                document.getElementById('trackingStatus').textContent = 'Error stopping tracking: ' + error.message;
             });
         }
         function pollTrackingStatus() {
@@ -320,10 +367,49 @@
         function closeSummary() {
             document.getElementById('summaryModal').style.display = 'none';
         }
+        function generateAnalysisReport() {
+            const summaryText = document.getElementById('summaryContent').textContent;
+            if (!summaryText || summaryText.trim() === '') {
+                alert('No summary available to analyze.');
+                return;
+            }
+            
+            document.getElementById('analysisContent').textContent = 'Generating threat analysis report...';
+            document.getElementById('analysisModal').style.display = 'block';
+            
+            fetch('/generate_analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ summary: summaryText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('analysisContent').textContent = 'Error: ' + data.error;
+                } else {
+                    document.getElementById('analysisContent').textContent = data.report;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('analysisContent').textContent = 'Error generating report: ' + error.message;
+            });
+        }
+        
+        function closeAnalysis() {
+            document.getElementById('analysisModal').style.display = 'none';
+        }
+        
         window.onclick = function(event) {
-            const modal = document.getElementById('summaryModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
+            const summaryModal = document.getElementById('summaryModal');
+            const analysisModal = document.getElementById('analysisModal');
+            
+            if (event.target === summaryModal) {
+                summaryModal.style.display = 'none';
+            }
+            
+            if (event.target === analysisModal) {
+                analysisModal.style.display = 'none';
             }
         }
     </script>
